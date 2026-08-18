@@ -2,11 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Cue, Track, TrackStyle } from '../lib/types';
 import { PLAY_RES_Y } from '../lib/types';
 import { formatClock } from '../lib/time';
+import { describeMkvFailure, diagnoseMkv, sniffMkvTracks } from '../lib/mkv';
 import { SubtitleText } from './SubtitleText';
 
 export interface PreviewVideo {
   url: string;
   name: string;
+  /** Original file, kept to sniff codecs when decoding fails. */
+  file: File;
 }
 
 interface PreviewProps {
@@ -28,6 +31,7 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
   const [playing, setPlaying] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [audioWarning, setAudioWarning] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stageHeight, setStageHeight] = useState(220);
@@ -68,6 +72,7 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
   // read it directly instead of relying solely on the loadedmetadata event.
   useEffect(() => {
     setVideoError(null);
+    setAudioWarning(null);
     setPlaying(false);
     const vid = videoRef.current;
     if (vid && vid.readyState >= 1 && Number.isFinite(vid.duration)) {
@@ -76,6 +81,38 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
       setVideoDuration(0);
     }
   }, [video?.url]);
+
+  /** Decode failed: read the container header to name the actual culprit. */
+  const explainVideoError = async () => {
+    const fallback = 'This browser can’t decode that file — try an MP4/WebM, or Chrome for MKV.';
+    if (!video) return;
+    try {
+      const head = await video.file.slice(0, 4 * 1024 * 1024).arrayBuffer();
+      const tracks = sniffMkvTracks(head);
+      setVideoError(tracks && tracks.length > 0 ? describeMkvFailure(diagnoseMkv(tracks)) : fallback);
+    } catch {
+      setVideoError(fallback);
+    }
+  };
+
+  /** Video playing but no audio bytes decoded → codec-less audio track. */
+  const checkSilentAudio = (vid: HTMLVideoElement) => {
+    const decoded = (vid as HTMLVideoElement & { webkitAudioDecodedByteCount?: number })
+      .webkitAudioDecodedByteCount;
+    if (decoded === undefined || decoded > 0 || vid.paused || vid.muted) return;
+    void video?.file
+      .slice(0, 4 * 1024 * 1024)
+      .arrayBuffer()
+      .then((head) => {
+        const tracks = sniffMkvTracks(head);
+        if (!tracks) return; // non-MKV: can't tell "no audio" from "unsupported"
+        const d = diagnoseMkv(tracks);
+        if (!d.audioCodec) return; // file simply has no audio track
+        setAudioWarning(
+          `Video plays, but the ${d.audioCodec} audio track isn’t supported by this browser.`,
+        );
+      });
+  };
 
   // Keep the CSS scale in sync with the rendered stage size.
   useEffect(() => {
@@ -158,6 +195,7 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
         <div class="preview-videobar">
           <span class="preview-videoname" title={video.name}>🎬 {video.name}</span>
           {videoError && <span class="preview-videoerror">{videoError}</span>}
+          {!videoError && audioWarning && <span class="preview-videoerror">{audioWarning}</span>}
           <button type="button" class="btn btn-ghost btn-small" onClick={onRemoveVideo}>
             Remove video
           </button>
@@ -181,15 +219,11 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => {
               // Keeps the clock moving when rAF is throttled (hidden tab).
-              if (!(e.target as HTMLVideoElement).paused) {
-                setTime((e.target as HTMLVideoElement).currentTime);
-              }
+              const vid = e.target as HTMLVideoElement;
+              if (!vid.paused) setTime(vid.currentTime);
+              if (audioWarning === null && vid.currentTime > 1) checkSilentAudio(vid);
             }}
-            onError={() =>
-              setVideoError(
-                'This browser can’t decode that file — try an MP4/WebM, or Chrome for MKV.',
-              )
-            }
+            onError={() => void explainVideoError()}
           />
         )}
         {!hasVideo && <div class="preview-vignette" aria-hidden="true" />}

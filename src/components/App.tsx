@@ -30,7 +30,7 @@ export function App() {
   const setVideoFromFile = useCallback((file: File) => {
     setVideo((prev) => {
       if (prev) URL.revokeObjectURL(prev.url);
-      return { url: URL.createObjectURL(file), name: file.name };
+      return { url: URL.createObjectURL(file), name: file.name, file };
     });
   }, []);
 
