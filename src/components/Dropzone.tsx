@@ -61,7 +61,8 @@ export function Dropzone({ onFiles }: DropzoneProps) {
         <span class="drop-overlay-icon" aria-hidden="true">💬</span>
         <p class="drop-overlay-title">Drop your subtitles</p>
         <p class="drop-overlay-sub">
-          One file fills the bottom track, a second fills the top
+          One file fills the bottom track, a second fills the top — video files
+          load into the preview player
         </p>
       </div>
     </div>

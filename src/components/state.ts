@@ -95,3 +95,10 @@ const SUBTITLE_EXTENSIONS = /\.(srt|vtt|txt)$/i;
 export function isSubtitleFile(file: File): boolean {
   return SUBTITLE_EXTENSIONS.test(file.name);
 }
+
+const VIDEO_EXTENSIONS = /\.(mp4|m4v|webm|mkv|mov|ogv)$/i;
+
+/** Video files load into the preview player instead of a subtitle slot. */
+export function isVideoFile(file: File): boolean {
+  return VIDEO_EXTENSIONS.test(file.name) || file.type.startsWith('video/');
+}

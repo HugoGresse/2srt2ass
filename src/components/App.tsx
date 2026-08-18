@@ -5,11 +5,12 @@ import type { TrackPosition } from '../lib/types';
 import { defaultScriptOptions } from '../lib/types';
 import { Dropzone } from './Dropzone';
 import { OutputPanel } from './OutputPanel';
-import { Preview } from './Preview';
+import { Preview, type PreviewVideo } from './Preview';
 import { SyncPanel } from './SyncPanel';
 import { TrackCard } from './TrackCard';
 import {
   isSubtitleFile,
+  isVideoFile,
   loadTrackFromFile,
   planFileAssignment,
   reencodeTrack,
@@ -22,8 +23,23 @@ import {
 /** Root island: all state lives here; everything below is presentational. */
 export function App() {
   const [state, setState] = useState<AppState>({ bottom: null, top: null });
+  const [video, setVideo] = useState<PreviewVideo | null>(null);
   const [customFilename, setCustomFilename] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const setVideoFromFile = useCallback((file: File) => {
+    setVideo((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return { url: URL.createObjectURL(file), name: file.name };
+    });
+  }, []);
+
+  const removeVideo = useCallback(() => {
+    setVideo((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  }, []);
 
   /** Load one file into a specific slot. */
   const loadInto = useCallback((position: TrackPosition, file: File) => {
@@ -36,20 +52,24 @@ export function App() {
   /** Dropped or browsed files without an explicit slot: plan the assignment. */
   const addFiles = useCallback(
     (incoming: File[]) => {
-      const files = incoming.filter(isSubtitleFile);
-      if (files.length === 0) {
-        setError('That doesn’t look like a subtitle file — expected .srt or .vtt.');
+      const subtitles = incoming.filter(isSubtitleFile);
+      const videoFile = incoming.find((f) => !isSubtitleFile(f) && isVideoFile(f));
+      if (subtitles.length === 0 && !videoFile) {
+        setError('That doesn’t look like a subtitle or video file — expected .srt, .vtt or a video.');
         return;
       }
       setError(null);
-      setState((prev) => {
-        planFileAssignment(prev, files.length).forEach((position, i) =>
-          loadInto(position, files[i]!),
-        );
-        return prev;
-      });
+      if (videoFile) setVideoFromFile(videoFile);
+      if (subtitles.length > 0) {
+        setState((prev) => {
+          planFileAssignment(prev, subtitles.length).forEach((position, i) =>
+            loadInto(position, subtitles[i]!),
+          );
+          return prev;
+        });
+      }
     },
-    [loadInto],
+    [loadInto, setVideoFromFile],
   );
 
   const pickFileFor = (position: TrackPosition) => (files: FileList | null) => {
@@ -78,7 +98,7 @@ export function App() {
 
   const bottomAss = toAssTrack(state.bottom);
   const topAss = toAssTrack(state.top);
-  const hasAny = state.bottom !== null || state.top !== null;
+  const hasAny = state.bottom !== null || state.top !== null || video !== null;
 
   const filename =
     customFilename ?? outputFilename(state.bottom?.fileName ?? state.top?.fileName ?? null);
@@ -105,7 +125,7 @@ export function App() {
         <label class="hero-drop">
           <input
             type="file"
-            accept=".srt,.vtt,.txt"
+            accept=".srt,.vtt,.txt,video/*,.mp4,.m4v,.webm,.mkv,.mov,.ogv"
             multiple
             hidden
             onChange={(e) => {
@@ -117,7 +137,7 @@ export function App() {
           <span class="hero-drop-icon" aria-hidden="true">⬆</span>
           <span class="hero-drop-title">Drop one or two SRT files anywhere</span>
           <span class="hero-drop-sub">
-            or click to browse — files never leave your browser
+            optionally with a video to preview against — files never leave your browser
           </span>
         </label>
       ) : (
@@ -161,7 +181,17 @@ export function App() {
           </div>
 
           <div class="workspace-output">
-            <Preview bottom={bottomAss} top={topAss} />
+            <Preview
+              bottom={bottomAss}
+              top={topAss}
+              video={video}
+              onPickVideo={(files) => {
+                const file = files?.[0];
+                if (file && isVideoFile(file)) setVideoFromFile(file);
+                else if (file) setError('That doesn’t look like a video file.');
+              }}
+              onRemoveVideo={removeVideo}
+            />
             {assText !== '' && (
               <OutputPanel
                 assText={assText}

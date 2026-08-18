@@ -26,6 +26,8 @@ And because it's a browser now:
 
 - 🖥️ Fullscreen drag-and-drop — drop one or two files anywhere on the page
 - 👁️ Live styled preview with timeline scrubbing, play and cue-to-cue jumping
+- 🎬 Drop a local video (MP4/WebM everywhere, MKV in Chromium) to preview and
+  play the subtitles over the real thing — the file never leaves your machine
 - 🎨 Per-track styling: font, size, colors, outline width, opaque box mode
 - 📄 WebVTT input support and single-file SRT → ASS conversion
 - 🔒 100% client-side: static site, zero upload, zero tracking

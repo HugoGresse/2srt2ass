@@ -4,28 +4,43 @@ import { PLAY_RES_Y } from '../lib/types';
 import { formatClock } from '../lib/time';
 import { SubtitleText } from './SubtitleText';
 
+export interface PreviewVideo {
+  url: string;
+  name: string;
+}
+
 interface PreviewProps {
   bottom: Track | null;
   top: Track | null;
+  video: PreviewVideo | null;
+  onPickVideo: (files: FileList | null) => void;
+  onRemoveVideo: () => void;
 }
 
 /**
- * Simulated video player: scrubbable timeline rendering the merged subtitles
- * with their ASS styles approximated in CSS.
+ * Player rendering the merged subtitles with their ASS styles approximated
+ * in CSS — over a simulated stage, or over a real local video file when one
+ * is loaded (object URL; the file never leaves the machine). With a video,
+ * the <video> element is the time authority; without, a rAF clock is.
  */
-export function Preview({ bottom, top }: PreviewProps) {
+export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: PreviewProps) {
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [stageHeight, setStageHeight] = useState(220);
 
-  const duration = useMemo(() => {
+  const subtitleEnd = useMemo(() => {
     const ends = [
       ...(bottom?.cues ?? []).map((c) => c.end + (bottom?.shift ?? 0)),
       ...(top?.cues ?? []).map((c) => c.end + (top?.shift ?? 0)),
     ];
     return ends.length > 0 ? Math.max(...ends) : 0;
   }, [bottom, top]);
+
+  const duration = Math.max(subtitleEnd, video && !videoError ? videoDuration : 0);
 
   // Cues are sorted by start, so the first one of each track is the earliest.
   const firstStart = useMemo(() => {
@@ -36,11 +51,31 @@ export function Preview({ bottom, top }: PreviewProps) {
     return starts.length > 0 ? Math.max(0, Math.min(...starts)) : 0;
   }, [bottom, top]);
 
+  const seek = (t: number) => {
+    setTime(t);
+    const vid = videoRef.current;
+    if (vid && vid.readyState > 0) vid.currentTime = t;
+  };
+
   // Open on the first subtitle instead of an empty frame at 0:00; also
   // re-snap when loading/swapping/syncing moves it. Style edits don't.
   useEffect(() => {
-    setTime(firstStart);
+    seek(firstStart);
   }, [firstStart]);
+
+  // New video file: reset error state and align it with the current time.
+  // Metadata may already be in (cached blob loads before this effect), so
+  // read it directly instead of relying solely on the loadedmetadata event.
+  useEffect(() => {
+    setVideoError(null);
+    setPlaying(false);
+    const vid = videoRef.current;
+    if (vid && vid.readyState >= 1 && Number.isFinite(vid.duration)) {
+      setVideoDuration(vid.duration);
+    } else {
+      setVideoDuration(0);
+    }
+  }, [video?.url]);
 
   // Keep the CSS scale in sync with the rendered stage size.
   useEffect(() => {
@@ -51,30 +86,57 @@ export function Preview({ bottom, top }: PreviewProps) {
     return () => observer.disconnect();
   }, []);
 
+  // Clock: follow the video when present, otherwise advance a rAF timer.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
     let last = performance.now();
     const step = (now: number) => {
-      const dt = (now - last) / 1000;
-      last = now;
-      setTime((t) => {
-        const next = t + dt;
-        if (next >= duration) {
+      const vid = videoRef.current;
+      if (vid && !videoError) {
+        setTime(vid.currentTime);
+        if (vid.ended) {
           setPlaying(false);
-          return duration;
+          return;
         }
-        return next;
-      });
+      } else {
+        const dt = (now - last) / 1000;
+        last = now;
+        let reachedEnd = false;
+        setTime((t) => {
+          const next = t + dt;
+          if (next >= duration) {
+            reachedEnd = true;
+            return duration;
+          }
+          return next;
+        });
+        if (reachedEnd) {
+          setPlaying(false);
+          return;
+        }
+      }
       raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [playing, duration]);
+  }, [playing, duration, videoError]);
+
+  const togglePlay = () => {
+    const vid = videoRef.current;
+    if (vid && !videoError) {
+      if (vid.paused) void vid.play().catch(() => setPlaying(false));
+      else vid.pause();
+      // `playing` follows the element's play/pause events.
+      return;
+    }
+    setPlaying((p) => !p);
+  };
 
   const scale = stageHeight / PLAY_RES_Y;
   const activeBottom = activeCues(bottom, time);
   const activeTop = activeCues(top, time);
+  const hasVideo = video !== null && !videoError;
 
   const jump = (direction: 1 | -1) => {
     const starts = [
@@ -87,14 +149,51 @@ export function Preview({ bottom, top }: PreviewProps) {
       direction === 1
         ? starts.find((s) => s > time + epsilon)
         : [...starts].reverse().find((s) => s < time - epsilon);
-    if (target !== undefined) setTime(Math.min(target + 0.01, duration));
+    if (target !== undefined) seek(Math.min(target + 0.01, duration));
   };
 
   return (
     <section class="preview" aria-label="Subtitle preview">
+      {video && (
+        <div class="preview-videobar">
+          <span class="preview-videoname" title={video.name}>🎬 {video.name}</span>
+          {videoError && <span class="preview-videoerror">{videoError}</span>}
+          <button type="button" class="btn btn-ghost btn-small" onClick={onRemoveVideo}>
+            Remove video
+          </button>
+        </div>
+      )}
+
       <div class="preview-stage" ref={stageRef}>
-        <div class="preview-vignette" aria-hidden="true" />
-        {activeTop.length + activeBottom.length === 0 && (
+        {video && (
+          <video
+            ref={videoRef}
+            class="preview-video"
+            src={video.url}
+            playsinline
+            preload="metadata"
+            onLoadedMetadata={(e) => {
+              const vid = e.target as HTMLVideoElement;
+              setVideoDuration(vid.duration);
+              vid.currentTime = time;
+            }}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onTimeUpdate={(e) => {
+              // Keeps the clock moving when rAF is throttled (hidden tab).
+              if (!(e.target as HTMLVideoElement).paused) {
+                setTime((e.target as HTMLVideoElement).currentTime);
+              }
+            }}
+            onError={() =>
+              setVideoError(
+                'This browser can’t decode that file — try an MP4/WebM, or Chrome for MKV.',
+              )
+            }
+          />
+        )}
+        {!hasVideo && <div class="preview-vignette" aria-hidden="true" />}
+        {activeTop.length + activeBottom.length === 0 && !hasVideo && (
           <p class="preview-empty">
             {duration === 0 ? 'Load a subtitle file to preview it here' : 'No subtitle at this time'}
           </p>
@@ -127,7 +226,7 @@ export function Preview({ bottom, top }: PreviewProps) {
         <button
           type="button"
           class="btn btn-icon"
-          onClick={() => setPlaying((p) => !p)}
+          onClick={togglePlay}
           disabled={duration === 0}
           aria-label={playing ? 'Pause' : 'Play'}
           title={playing ? 'Pause' : 'Play'}
@@ -162,15 +261,26 @@ export function Preview({ bottom, top }: PreviewProps) {
           step={0.05}
           value={time}
           disabled={duration === 0}
-          onInput={(e) => {
-            setPlaying(false);
-            setTime(Number.parseFloat((e.target as HTMLInputElement).value));
-          }}
+          onInput={(e) => seek(Number.parseFloat((e.target as HTMLInputElement).value))}
           aria-label="Timeline"
         />
         <span class="preview-clock">
           {formatClock(time)} / {formatClock(duration)}
         </span>
+        {!video && (
+          <label class="btn btn-ghost btn-small preview-loadvideo" title="Preview over a real video file (stays on your machine)">
+            <input
+              type="file"
+              accept="video/*,.mp4,.m4v,.webm,.mkv,.mov,.ogv"
+              hidden
+              onChange={(e) => {
+                onPickVideo((e.target as HTMLInputElement).files);
+                (e.target as HTMLInputElement).value = '';
+              }}
+            />
+            🎬 Video…
+          </label>
+        )}
       </div>
     </section>
   );
