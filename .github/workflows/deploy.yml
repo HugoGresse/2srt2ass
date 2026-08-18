@@ -16,9 +16,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
     steps:
       - uses: actions/checkout@v7
 
@@ -37,12 +34,11 @@ jobs:
         run: npm run check
 
       - name: Configure GitHub Pages
-        # Only needed for real deploys; also auto-enables Pages on first run.
+        # Pages must be enabled with the "GitHub Actions" source (one-time:
+        # gh api repos/<owner>/<repo>/pages -X POST -f build_type=workflow).
         if: github.event_name != 'pull_request'
         id: pages
         uses: actions/configure-pages@v6
-        with:
-          enablement: true
 
       - name: Build
         run: npm run build
