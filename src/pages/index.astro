@@ -26,12 +26,13 @@ const description =
     <meta property="og:description" content={description} />
     <meta property="og:url" content={Astro.site} />
     <meta name="twitter:card" content="summary" />
-    <meta name="theme-color" content="#0b0e14" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0e14" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f6fa" />
   </head>
   <body>
     <header class="site-header">
       <a class="brand" href={import.meta.env.BASE_URL}>
-        <span class="brand-icon" aria-hidden="true">💬</span>
+        <img class="brand-icon" src={`${base}/favicon.svg`} alt="" width="26" height="26" />
         <span class="brand-name">2srt2ass</span>
       </a>
       <nav class="site-nav">
@@ -105,13 +106,8 @@ const description =
 
     <footer class="site-footer">
       <p>
-        <a href="https://github.com/HugoGresse/2srt2ass" rel="noopener noreferrer" target="_blank">
-          Source on GitHub
-        </a>
-        · a web reimplementation of
-        <a href="https://github.com/mcourteaux/2srt2ass-cpp" rel="noopener noreferrer" target="_blank">
-          2srt2ass++
-        </a>
+        <a href="https://github.com/HugoGresse/2srt2ass" rel="noopener noreferrer" target="_blank">Source on GitHub</a>{' · '}a web reimplementation of{' '}
+        <a href="https://github.com/mcourteaux/2srt2ass-cpp" rel="noopener noreferrer" target="_blank">2srt2ass++</a>{' '}
         by Martijn Courteaux · MIT license · No cookies, no analytics, no uploads.
       </p>
     </footer>

@@ -23,7 +23,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 body {
@@ -93,7 +93,10 @@ code {
 }
 
 .brand-icon {
-  font-size: 1.3rem;
+  display: block;
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  border-radius: 7px;
 }
 
 .site-nav {
@@ -308,4 +311,47 @@ code {
 
 .field-narrow input {
   width: 5.5rem;
+}
+
+/* ————— Light theme (auto via prefers-color-scheme) ————— */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f6fa;
+    --bg-raise: #ffffff;
+    --panel: #ffffff;
+    --panel-border: #d8deea;
+    --text: #18202f;
+    --text-dim: #5a6577;
+    --accent: #0d9488;
+    --accent-strong: #0f766e;
+    --accent-contrast: #ffffff;
+    --warn: #b45309;
+    --error: #dc2626;
+  }
+
+  body {
+    background:
+      radial-gradient(1100px 500px at 50% -12%, #dbeafe80, transparent),
+      var(--bg);
+  }
+
+  .hero-accent {
+    background: linear-gradient(100deg, #0d9488 0%, #0284c7 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  .btn-primary {
+    background: linear-gradient(120deg, #0d9488, #0284c7);
+    color: #ffffff;
+  }
+
+  .explainer-grid article,
+  .features li,
+  .track-card,
+  .sync-panel,
+  .preview,
+  .output-panel {
+    box-shadow: 0 1px 3px #0f1c2e14;
+  }
 }
