@@ -1,0 +1,458 @@
+/* ————— App shell ————— */
+.app {
+  margin-top: 1.5rem;
+}
+
+.app-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 45%, transparent);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  margin: 0 0 1rem;
+}
+
+/* ————— Hero drop target (empty state) ————— */
+.hero-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 16rem;
+  border: 2px dashed color-mix(in srgb, var(--accent) 45%, var(--panel-border));
+  border-radius: 18px;
+  background:
+    radial-gradient(600px 220px at 50% 0%, #2dd4bf12, transparent),
+    var(--panel);
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms;
+  text-align: center;
+  padding: 2rem;
+}
+
+.hero-drop:hover {
+  border-color: var(--accent);
+}
+
+.hero-drop-icon {
+  font-size: 2.2rem;
+  color: var(--accent);
+}
+
+.hero-drop-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.hero-drop-sub {
+  color: var(--text-dim);
+}
+
+/* ————— Fullscreen drag overlay ————— */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.drop-overlay-card {
+  border: 2px dashed var(--accent);
+  border-radius: 20px;
+  background: var(--panel);
+  padding: 3rem 4rem;
+  text-align: center;
+  box-shadow: 0 20px 80px #0009;
+}
+
+.drop-overlay-icon {
+  font-size: 3rem;
+}
+
+.drop-overlay-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.drop-overlay-sub {
+  color: var(--text-dim);
+  margin: 0;
+}
+
+/* ————— Workspace layout ————— */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 5fr) minmax(380px, 7fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.workspace-tracks,
+.workspace-output {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* ————— Track cards ————— */
+.track-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
+}
+
+.track-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.track-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.track-dot {
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border-radius: 50%;
+}
+
+.track-dot-bottom {
+  background: var(--accent);
+}
+
+.track-dot-top {
+  background: #facc15;
+}
+
+.track-file {
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  margin: 0.6rem 0 0.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-stats {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.track-warning {
+  color: var(--warn);
+  font-size: 0.85rem;
+  margin: 0 0 0.6rem;
+}
+
+.track-warnings {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 0.6rem;
+}
+
+.track-warnings summary {
+  cursor: pointer;
+  color: var(--warn);
+}
+
+.track-warnings ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.track-options {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.track-options .field:first-child {
+  flex: 1;
+  min-width: 11rem;
+}
+
+.track-style-toggle.is-open {
+  border-color: var(--accent);
+}
+
+.track-card-empty .track-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1.5px dashed var(--panel-border);
+  border-radius: 10px;
+  padding: 1.4rem 1rem;
+  margin-top: 0.75rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 150ms;
+}
+
+.track-card-empty .track-drop:hover {
+  border-color: var(--accent);
+}
+
+.track-drop-cta {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.track-drop-hint {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.btn-swap {
+  align-self: center;
+  margin-block: -0.35rem;
+}
+
+/* ————— Style editor ————— */
+.style-editor {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border-top: 1px dashed var(--panel-border);
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+}
+
+.style-editor .field:first-child {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.toggle-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.chip {
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  background: var(--bg-raise);
+  border: 1px solid var(--panel-border);
+  border-radius: 7px;
+  padding: 0.35rem 0.65rem;
+  cursor: pointer;
+}
+
+.chip-italic {
+  font-style: italic;
+}
+
+.chip-on {
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ————— Sync panel ————— */
+.sync-panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
+}
+
+.sync-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sync-result {
+  width: 100%;
+  margin: 0.25rem 0 0;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.sync-manual {
+  border-top: 1px dashed var(--panel-border);
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+}
+
+.sync-manual-hint {
+  margin: 0 0 0.6rem;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.sync-selects {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sync-selects select {
+  max-width: 100%;
+}
+
+.sync-selects .btn {
+  align-self: flex-start;
+}
+
+/* ————— Preview ————— */
+.preview {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.preview-stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background:
+    radial-gradient(75% 90% at 50% 12%, #1d2637, #0a0d13 78%);
+  overflow: hidden;
+}
+
+.preview-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 50% 50%, transparent 60%, #00000055);
+}
+
+.preview-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.preview-line {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.preview-line span {
+  display: inline;
+}
+
+.preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-top: 1px solid var(--panel-border);
+}
+
+.preview-scrub {
+  flex: 1;
+  accent-color: var(--accent);
+  min-width: 0;
+}
+
+.preview-clock {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ————— Output panel ————— */
+.output-panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
+}
+
+.output-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+
+.output-filename {
+  flex: 1;
+  min-width: 14rem;
+}
+
+.output-filename input {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+}
+
+.output-bom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  padding-block: 0.55rem;
+  cursor: pointer;
+}
+
+.output-bom input {
+  accent-color: var(--accent);
+}
+
+.output-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.output-size {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.output-raw {
+  margin: 0.9rem 0 0;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 0.9rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: pre;
+}

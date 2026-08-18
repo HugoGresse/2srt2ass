@@ -1,0 +1,116 @@
+---
+import '../styles/global.css';
+import '../styles/app.css';
+import { App } from '../components/App';
+
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const title = '2srt2ass — merge two SRT subtitles into one dual-language ASS file';
+const description =
+  'Free online tool to merge two SRT subtitle files into a single dual-language ASS file. ' +
+  'Auto-sync mistimed subtitles, fix encodings, style both tracks and preview the result — ' +
+  'entirely in your browser, no upload.';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <link rel="canonical" href={Astro.site} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={Astro.site} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="theme-color" content="#0b0e14" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href={import.meta.env.BASE_URL}>
+        <span class="brand-icon" aria-hidden="true">💬</span>
+        <span class="brand-name">2srt2ass</span>
+      </a>
+      <nav class="site-nav">
+        <a href="#how-it-works">How it works</a>
+        <a
+          href="https://github.com/mcourteaux/2srt2ass-cpp"
+          rel="noopener noreferrer"
+          target="_blank"
+          title="Original command-line tool this site is based on"
+        >
+          CLI origin ↗
+        </a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Two SRT in. <span class="hero-accent">One dual-language ASS out.</span></h1>
+        <p class="hero-tagline">
+          Watch with two languages at once: one subtitle track at the bottom, the other at
+          the top. Merge, synchronize, restyle and preview — all in your
+          browser. <strong>Your files are never uploaded.</strong>
+        </p>
+      </section>
+
+      <App client:load />
+
+      <section id="how-it-works" class="explainer">
+        <h2>How it works</h2>
+        <div class="explainer-grid">
+          <article>
+            <h3>1 · Drop two SRT files</h3>
+            <p>
+              The first file becomes the bottom track (usually the original language), the
+              second the top track (usually your language). Single-file SRT → ASS conversion
+              works too. WebVTT input is also accepted.
+            </p>
+          </article>
+          <article>
+            <h3>2 · Sync &amp; style</h3>
+            <p>
+              Subtitles from different releases rarely line up. Auto-sync scans thousands of
+              candidate time shifts and picks the alignment that matches best — or pick two
+              lines that should coincide and let the tool compute the shift. Fonts, colors,
+              outlines and opaque boxes are configurable per track.
+            </p>
+          </article>
+          <article>
+            <h3>3 · Preview &amp; download</h3>
+            <p>
+              Scrub through a live preview to check timing and styling, then download the
+              generated <code>.ass</code> file. It works in VLC, mpv, Kodi, Plex, Jellyfin
+              and anything else that renders Advanced SubStation Alpha subtitles.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="features">
+        <h2>Everything the CLI does, plus a browser</h2>
+        <ul>
+          <li>🔄 Character-encoding detection and conversion (UTF-8, Windows-125x, ISO-8859, CJK…)</li>
+          <li>🪄 Automatic time synchronization of the top track against the bottom one</li>
+          <li>🦺 Manual sync by matching two lines, and per-track manual time shift</li>
+          <li>🖊️ Italic, bold, underline and font-color tags converted to ASS</li>
+          <li>🎨 Per-track styling: font, size, colors, outline or opaque box</li>
+          <li>⚡ Static site, zero upload, zero tracking — everything runs locally</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        A web reimplementation of
+        <a href="https://github.com/mcourteaux/2srt2ass-cpp" rel="noopener noreferrer" target="_blank">
+          2srt2ass++
+        </a>
+        by Martijn Courteaux · MIT license · No cookies, no analytics, no uploads.
+      </p>
+    </footer>
+  </body>
+</html>
