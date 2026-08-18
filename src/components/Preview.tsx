@@ -3,6 +3,7 @@ import type { Cue, Track, TrackStyle } from '../lib/types';
 import { PLAY_RES_Y } from '../lib/types';
 import { formatClock } from '../lib/time';
 import { describeMkvFailure, diagnoseMkv, sniffMkvTracks } from '../lib/mkv';
+import { FullscreenControls } from './FullscreenControls';
 import { SubtitleText } from './SubtitleText';
 
 export interface PreviewVideo {
@@ -32,9 +33,17 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [audioWarning, setAudioWarning] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [controlsAwake, setControlsAwake] = useState(true);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stageHeight, setStageHeight] = useState(220);
+
+  const canFullscreen =
+    typeof document !== 'undefined' && document.fullscreenEnabled === true;
 
   const subtitleEnd = useMemo(() => {
     const ends = [
@@ -123,6 +132,88 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
     return () => observer.disconnect();
   }, []);
 
+  // Track fullscreen state (Esc exits natively).
+  useEffect(() => {
+    const onChange = () => {
+      setIsFullscreen(document.fullscreenElement === stageRef.current);
+      setControlsAwake(true);
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  // Apply volume/mute to the video element.
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    vid.volume = volume;
+    vid.muted = muted;
+  }, [volume, muted, video?.url]);
+
+  /** Show the fullscreen controls, then let them fade while playing. */
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
+  const wakeControls = () => {
+    setControlsAwake(true);
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => {
+      // Never hide the controls while paused.
+      if (playingRef.current) setControlsAwake(false);
+    }, 2500);
+  };
+
+  // Paused → keep controls visible; unmount → clear the timer.
+  useEffect(() => {
+    if (!playing) {
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+      setControlsAwake(true);
+    }
+    return () => {
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+    };
+  }, [playing]);
+
+  // Player keyboard shortcuts, fullscreen only.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      const vid = videoRef.current;
+      const step = (delta: number) =>
+        seekRef.current(Math.max(0, Math.min(durationRef.current, timeRef.current + delta)));
+      switch (e.key) {
+        case ' ':
+        case 'k':
+          e.preventDefault();
+          togglePlayRef.current();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          step(-5);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          step(5);
+          break;
+        case 'ArrowUp':
+        case 'ArrowDown': {
+          if (!vid) break;
+          e.preventDefault();
+          setMuted(false);
+          setVolume((v) => Math.max(0, Math.min(1, v + (e.key === 'ArrowUp' ? 0.1 : -0.1))));
+          break;
+        }
+        case 'm':
+          setMuted((m) => !m);
+          break;
+        case 'f':
+          void document.exitFullscreen();
+          break;
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isFullscreen]);
+
   // Clock: follow the video when present, otherwise advance a rAF timer.
   useEffect(() => {
     if (!playing) return;
@@ -170,6 +261,17 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
     setPlaying((p) => !p);
   };
 
+  // Always-fresh references for the fullscreen keyboard listener, which is
+  // bound once per fullscreen session and must not capture stale closures.
+  const timeRef = useRef(time);
+  const durationRef = useRef(duration);
+  const seekRef = useRef(seek);
+  const togglePlayRef = useRef(togglePlay);
+  timeRef.current = time;
+  durationRef.current = duration;
+  seekRef.current = seek;
+  togglePlayRef.current = togglePlay;
+
   const scale = stageHeight / PLAY_RES_Y;
   const activeBottom = activeCues(bottom, time);
   const activeTop = activeCues(top, time);
@@ -202,7 +304,12 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
         </div>
       )}
 
-      <div class="preview-stage" ref={stageRef}>
+      <div
+        class={`preview-stage ${isFullscreen && !controlsAwake ? 'fs-idle' : ''}`}
+        ref={stageRef}
+        onPointerMove={isFullscreen ? wakeControls : undefined}
+        onClick={isFullscreen ? togglePlay : undefined}
+      >
         {video && (
           <video
             ref={videoRef}
@@ -254,6 +361,26 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
             ))}
           </div>
         )}
+        {isFullscreen && (
+          <FullscreenControls
+            visible={controlsAwake}
+            playing={playing}
+            time={time}
+            duration={duration}
+            hasAudio={hasVideo}
+            volume={volume}
+            muted={muted}
+            onTogglePlay={togglePlay}
+            onSeek={seek}
+            onJump={jump}
+            onVolume={(v) => {
+              setMuted(false);
+              setVolume(v);
+            }}
+            onToggleMute={() => setMuted((m) => !m)}
+            onExit={() => void document.exitFullscreen()}
+          />
+        )}
       </div>
 
       <div class="preview-controls">
@@ -301,6 +428,18 @@ export function Preview({ bottom, top, video, onPickVideo, onRemoveVideo }: Prev
         <span class="preview-clock">
           {formatClock(time)} / {formatClock(duration)}
         </span>
+        {canFullscreen && (
+          <button
+            type="button"
+            class="btn btn-icon"
+            onClick={() => void stageRef.current?.requestFullscreen()}
+            disabled={duration === 0}
+            aria-label="Fullscreen player"
+            title="Fullscreen player"
+          >
+            ⛶
+          </button>
+        )}
         {!video && (
           <label class="btn btn-ghost btn-small preview-loadvideo" title="Preview over a real video file (stays on your machine)">
             <input

@@ -382,6 +382,78 @@
   white-space: nowrap;
 }
 
+/* ————— Fullscreen player ————— */
+.preview-stage:fullscreen {
+  aspect-ratio: auto;
+  background: #000;
+}
+
+.preview-stage.fs-idle {
+  cursor: none;
+}
+
+.fs-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 1.25rem 1rem;
+  background: linear-gradient(transparent, #000000cc);
+  transition: opacity 250ms;
+}
+
+.fs-controls-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fs-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.fs-btn {
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  color: #f2f4f8;
+  background: #ffffff1f;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+
+.fs-btn:hover {
+  background: #ffffff38;
+}
+
+.fs-clock {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: #d6dae2;
+  white-space: nowrap;
+}
+
+.fs-spacer {
+  flex: 1;
+}
+
+.fs-scrub {
+  width: 100%;
+  accent-color: #5eead4;
+}
+
+.fs-volume {
+  width: 7rem;
+  accent-color: #5eead4;
+}
+
 .preview-vignette {
   position: absolute;
   inset: 0;
