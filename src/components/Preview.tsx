@@ -27,6 +27,21 @@ export function Preview({ bottom, top }: PreviewProps) {
     return ends.length > 0 ? Math.max(...ends) : 0;
   }, [bottom, top]);
 
+  // Cues are sorted by start, so the first one of each track is the earliest.
+  const firstStart = useMemo(() => {
+    const starts = [
+      ...(bottom && bottom.cues.length > 0 ? [bottom.cues[0]!.start + bottom.shift] : []),
+      ...(top && top.cues.length > 0 ? [top.cues[0]!.start + top.shift] : []),
+    ];
+    return starts.length > 0 ? Math.max(0, Math.min(...starts)) : 0;
+  }, [bottom, top]);
+
+  // Open on the first subtitle instead of an empty frame at 0:00; also
+  // re-snap when loading/swapping/syncing moves it. Style edits don't.
+  useEffect(() => {
+    setTime(firstStart);
+  }, [firstStart]);
+
   // Keep the CSS scale in sync with the rendered stage size.
   useEffect(() => {
     const el = stageRef.current;
